@@ -177,6 +177,8 @@ struct {
   int indexOfPointer = -1;
 } Adc[MAX_ADCS];
 
+float avg = 0;
+
 bool adcAttachPin(uint8_t pin) {
 #ifdef ESP8266
   return (ADC0_PIN == pin);
@@ -495,40 +497,47 @@ float AdcGetRange(uint32_t idx) {
 }
 
 void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
-  // factor 1 = 2 samples
-  // factor 2 = 4 samples
-  // factor 3 = 8 samples
-  // factor 4 = 16 samples
-  // factor 5 = 32 samples
-  uint8_t samples = 1 << factor;
-  uint16_t analog = 0;
-  uint16_t analog_min = ANALOG_RANGE;
-  uint16_t analog_max = 0;
+  Ads1115StartComparator(0, 0, 0x0000);
+  double lastvalue = 0;
+  double analog = 0;
+  float samplesquaredsum = 0;
+  float samplesum = 0;
 
-  if (0 == Adc[idx].param1) {
+  if (true) {
     unsigned long tstart=millis();
-    while (millis()-tstart < 35) {
-      analog = analogRead(Adc[idx].pin);
-      if (analog < analog_min) {
-        analog_min = analog;
-      }
-      if (analog > analog_max) {
-        analog_max = analog;
-      }
+    uint16_t countt=0;
+    
+    while (millis()-tstart < 200) {
+      // analog = (int16_t)analogRead(Adc[idx].pin);
+      // analog = Ads1115GetConversion(1,2);
+      analog = Ads1115GetConversion(0, 0);
+      // analog = analog - 820;
+      
+      if (analog != lastvalue) {
+        countt = countt + 1l;
+        lastvalue = analog;
+        samplesquaredsum = samplesquaredsum + pow(analog, 2);
+        samplesum = samplesum + analog;
+      } 
+
+
     }
-    //AddLog(0, PSTR("min: %u, max:%u, dif:%u"), analog_min, analog_max, analog_max-analog_min);
-    Adc[idx].current = (float)(analog_max-analog_min) * ((float)(Adc[idx].param2) / 100000);
+
+    float rms_squared = (float)samplesquaredsum / (float)countt;
+    float rms = (float)sqrt(rms_squared);
+    int16_t dc = samplesum / countt;
+    rms = rms - dc;
+
+    // Average
+    avg -= avg / 30;
+    avg += rms / 30;
+
+    rms = avg;
+
+    AddLog(0, PSTR("value:%d, samples:%u, analog:%d, avg:%d"), (int)rms, countt, (int)analog, (int)avg );
+    Adc[idx].current = (float)(rms) * ((float)(Adc[idx].param2) / 10000);
     if (Adc[idx].current < (((float)Adc[idx].param4) / 10000.0))
         Adc[idx].current = 0.0;
-  }
-  else {
-    analog = AdcRead(Adc[idx].pin, 5);
-    if (analog > Adc[idx].param1) {
-     Adc[idx].current = ((float)(analog) - (float)Adc[idx].param1) * ((float)(Adc[idx].param2) / 100000);
-    }
-    else {
-      Adc[idx].current = 0;
-    }
   }
 
   float power = Adc[idx].current * (float)(Adc[idx].param3) / 10;

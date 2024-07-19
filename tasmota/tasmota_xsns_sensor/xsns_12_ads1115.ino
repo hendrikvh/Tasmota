@@ -156,14 +156,16 @@ void Ads1115StartComparator(uint32_t device, uint8_t channel, uint16_t mode) {
 }
 
 int16_t Ads1115GetConversion(uint32_t device, uint8_t channel) {
-  Ads1115StartComparator(device, channel, ADS1115_REG_CONFIG_MODE_SINGLE);
-  // Wait for the conversion to complete
-  delay(ADS1115_CONVERSIONDELAY);
-  // Read the conversion results
-  I2cRead16(Ads1115[device].address, ADS1115_REG_POINTER_CONVERT, Ads1115[device].bus);
+  device = 0;
+  channel = 0;
+  // Ads1115StartComparator(device, channel, ADS1115_REG_CONFIG_MODE_SINGLE);
+  // // Wait for the conversion to complete
+  // delay(ADS1115_CONVERSIONDELAY);
+  // // Read the conversion results
+  // I2cRead16(Ads1115[device].address, ADS1115_REG_POINTER_CONVERT, Ads1115[device].bus);
 
-  Ads1115StartComparator(device, channel, ADS1115_REG_CONFIG_MODE_CONTIN);
-  delay(ADS1115_CONVERSIONDELAY);
+  // Ads1115StartComparator(device, channel, ADS1115_REG_CONFIG_MODE_CONTIN);
+  // delay(ADS1115_CONVERSIONDELAY);
   // Read the conversion results
   uint16_t res = I2cRead16(Ads1115[device].address, ADS1115_REG_POINTER_CONVERT, Ads1115[device].bus);
   return (int16_t)res;
@@ -224,7 +226,7 @@ void AdsEvery250ms(void) {
     // collect first wich addresses have changed. We can save on rule processing this way
     uint32_t changed = 0;
     for (uint32_t i = 0; i < ads1115_channels; i++) {
-      value = Ads1115GetConversion(t, i);
+      // value = Ads1115GetConversion(t, i);
 
       // Check if value has changed more than 1 percent from last stored value
       // we assume that gain is set up correctly, and we could use the whole 16bit result space
@@ -259,7 +261,8 @@ void Ads1115Show(bool json) {
   for (uint32_t t = 0; t < ads1115_count; t++) {
 //    AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x", Ads1115[t].address);
     for (uint32_t i = 0; i < ads1115_channels; i++) {
-      values[i] = Ads1115GetConversion(t, i);
+      // values[i] = Ads1115GetConversion(0, 0);
+      values[i] = 4;
 //      AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x (%i) = %i", Ads1115[t].address, i, values[i] );
     }
 
