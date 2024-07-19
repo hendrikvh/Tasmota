@@ -171,6 +171,11 @@ int16_t Ads1115GetConversion(uint32_t device, uint8_t channel) {
   return (int16_t)res;
 }
 
+int16_t Ads1115GetQuickConversion() {
+  uint16_t res = I2cRead16(Ads1115[0].address, ADS1115_REG_POINTER_CONVERT, Ads1115[0].bus);
+  return (int16_t)res;
+}
+
 /********************************************************************************************/
 
 void Ads1115Detect(void) {
@@ -197,7 +202,7 @@ void Ads1115Detect(void) {
 void Ads1115Label(char* label, uint32_t maxsize, uint32_t device) {
   // Create the identifier of the the selected sensor
   // "ADS1115":{"A0":3240,"A1":3235,"A2":3269,"A3":3269}
-  snprintf_P(label, maxsize, PSTR("ADS1115"));
+  snprintf_P(label, maxsize, PSTR("H Modified ADS1115"));
   if (ads1115_count > 1) {
     // "ADS1115-48":{"A0":3240,"A1":3235,"A2":3269,"A3":3269},"ADS1115-49":{"A0":3240,"A1":3235,"A2":3269,"A3":3269}
     snprintf_P(label, maxsize, PSTR("%s%c%02X"), label, IndexSeparator(), Ads1115[device].address);
@@ -262,7 +267,7 @@ void Ads1115Show(bool json) {
 //    AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x", Ads1115[t].address);
     for (uint32_t i = 0; i < ads1115_channels; i++) {
       // values[i] = Ads1115GetConversion(0, 0);
-      values[i] = 4;
+      values[i] = 777;
 //      AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x (%i) = %i", Ads1115[t].address, i, values[i] );
     }
 

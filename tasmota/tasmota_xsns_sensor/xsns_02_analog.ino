@@ -496,7 +496,12 @@ float AdcGetRange(uint32_t idx) {
   return (float)adcrange;
 }
 
+// Adapted for ADS1115
+// Use AdcParam1":[7,0,101,0.23,0.060]
+// Set ADC to CT power
+// Add a rule ON System#Boot DO Sensor12 D1 ENDON
 void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
+  // Start in continuous mode
   Ads1115StartComparator(0, 0, 0x0000);
   double lastvalue = 0;
   double analog = 0;
@@ -504,46 +509,39 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
   float samplesum = 0;
 
   if (true) {
-    unsigned long tstart=millis();
-    uint16_t countt=0;
+    unsigned long tstart = millis();
+    uint16_t count = 0;
     
-    while (millis()-tstart < 200) {
-      // analog = (int16_t)analogRead(Adc[idx].pin);
-      // analog = Ads1115GetConversion(1,2);
-      analog = Ads1115GetConversion(0, 0);
-      // analog = analog - 820;
-      
+    while (millis() - tstart < 200) {
+      analog = Ads1115GetQuickConversion();
+      // Don't collect duplicate values if the ADC is slow
       if (analog != lastvalue) {
-        countt = countt + 1l;
+        count = count + 1l;
         lastvalue = analog;
         samplesquaredsum = samplesquaredsum + pow(analog, 2);
         samplesum = samplesum + analog;
       } 
-
-
     }
 
-    float rms_squared = (float)samplesquaredsum / (float)countt;
-    float rms = (float)sqrt(rms_squared);
-    int16_t dc = samplesum / countt;
+    // Calculate RMS
+    float rms_squared = samplesquaredsum / count;
+    float rms = sqrt(rms_squared);
+    int dc = samplesum / count;
     rms = rms - dc;
 
-    // Average
-    avg -= avg / 30;
-    avg += rms / 30;
-
+    // Lazily average over last 30 readings
+    // We sample about twice a second and teleperiod should be 60
+    avg -= avg / 120;
+    avg += rms / 120;
     rms = avg;
 
-    AddLog(0, PSTR("value:%d, samples:%u, analog:%d, avg:%d"), (int)rms, countt, (int)analog, (int)avg );
-    Adc[idx].current = (float)(rms) * ((float)(Adc[idx].param2) / 10000);
+    // AddLog(0, PSTR("value:%d, samples:%u, analog:%d, avg:%d"), (int)rms, count, (int)analog, (int)avg );
+    Adc[idx].current = rms * ((float)(Adc[idx].param2) / 10000);
     if (Adc[idx].current < (((float)Adc[idx].param4) / 10000.0))
         Adc[idx].current = 0.0;
   }
 
   float power = Adc[idx].current * (float)(Adc[idx].param3) / 10;
-  uint32_t current_millis = millis();
-  Adc[idx].energy = Adc[idx].energy + ((power * (current_millis - Adc[idx].previous_millis)) / 3600000000);
-  Adc[idx].previous_millis = current_millis;
 }
 
 void AdcEverySecond(void) {
