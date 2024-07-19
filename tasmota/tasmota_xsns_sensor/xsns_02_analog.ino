@@ -529,10 +529,9 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
     int dc = samplesum / count;
     rms = rms - dc;
 
-    // Lazily average over last 30 readings
-    // We sample about twice a second and teleperiod should be 60
-    avg -= avg / 120;
-    avg += rms / 120;
+    // Lazily average over last few readings to get a nice average over 60s
+    avg -= avg / 30;
+    avg += rms / 30;
     rms = avg;
 
     // AddLog(0, PSTR("value:%d, samples:%u, analog:%d, avg:%d"), (int)rms, count, (int)analog, (int)avg );
