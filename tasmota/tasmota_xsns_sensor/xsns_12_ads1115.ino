@@ -199,28 +199,6 @@ void Ads1115Detect(void) {
   }
 }
 
-void Ads1115Label(char* label, uint32_t maxsize, uint32_t device) {
-  // Create the identifier of the the selected sensor
-  // "ADS1115":{"A0":3240,"A1":3235,"A2":3269,"A3":3269}
-  snprintf_P(label, maxsize, PSTR("H Modified ADS1115"));
-  if (ads1115_count > 1) {
-    // "ADS1115-48":{"A0":3240,"A1":3235,"A2":3269,"A3":3269},"ADS1115-49":{"A0":3240,"A1":3235,"A2":3269,"A3":3269}
-    snprintf_P(label, maxsize, PSTR("%s%c%02X"), label, IndexSeparator(), Ads1115[device].address);
-#ifdef ESP32
-    if (TasmotaGlobal.i2c_enabled_2) {           // Second bus enabled
-      uint8_t bus = Ads1115[0].bus;
-      for (uint32_t i = 1; i < ads1115_count; i++) {
-        if (bus != Ads1115[i].bus) {             // Different busses
-          // "ADS1115-48-1":{"A0":3240,"A1":3235,"A2":3269,"A3":3269},"ADS1115-48-2":{"A0":3240,"A1":3235,"A2":3269,"A3":3269}
-          snprintf_P(label, maxsize, PSTR("%s%c%d"), label, IndexSeparator(), Ads1115[device].bus +1);
-          break;
-        }
-      }
-    }
-#endif
-  }
-}
-
 #ifdef USE_RULES
 // Check every 250ms if there are relevant changes in any of the analog inputs
 // and if so then trigger a message
@@ -240,54 +218,12 @@ void AdsEvery250ms(void) {
         bitSet(changed, i);
       }
     }
-
-    if (changed) {
-      char label[16];
-      Ads1115Label(label, sizeof(label), t);
-      Response_P(PSTR("{\"%s\":{"), label);
-      bool first = true;
-      for (uint32_t i = 0; i < ads1115_channels; i++) {
-        if (bitRead(changed, i)) {
-          ResponseAppend_P(PSTR("%s\"A%ddiv10\":%d"), (first) ? "" : ",", i, Ads1115[t].last_values[i]);
-          first = false;
-        }
-      }
-      ResponseJsonEndEnd();
-
-      XdrvRulesProcess(0);
-    }
   }
 }
 #endif  // USE_RULES
 
 void Ads1115Show(bool json) {
-  int16_t values[4];
-
-  for (uint32_t t = 0; t < ads1115_count; t++) {
-//    AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x", Ads1115[t].address);
-    for (uint32_t i = 0; i < ads1115_channels; i++) {
-      // values[i] = Ads1115GetConversion(0, 0);
-      values[i] = 777;
-//      AddLog(LOG_LEVEL_INFO, "Logging ADS1115 %02x (%i) = %i", Ads1115[t].address, i, values[i] );
-    }
-
-    char label[16];
-    Ads1115Label(label, sizeof(label), t);
-    if (json) {
-      ResponseAppend_P(PSTR(",\"%s\":{"), label);
-      for (uint32_t i = 0; i < ads1115_channels; i++) {
-        ResponseAppend_P(PSTR("%s\"A%d\":%d"), (0 == i) ? "" : ",", i, values[i]);
-      }
-      ResponseJsonEnd();
-    }
-#ifdef USE_WEBSERVER
-    else {
-      for (uint32_t i = 0; i < ads1115_channels; i++) {
-        WSContentSend_PD(HTTP_SNS_ANALOG, label, i, values[i]);
-      }
-    }
-#endif  // USE_WEBSERVER
-  }
+  // Do nothing -- we don't need these raw values
 }
 
 bool ADS1115_Command(void) {
