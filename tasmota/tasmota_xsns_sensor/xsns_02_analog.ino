@@ -550,6 +550,9 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
   }
 
   float power = Adc[idx].current * (float)(Adc[idx].param3) / 10;
+  uint32_t current_millis = millis();
+  Adc[idx].energy = Adc[idx].energy + ((power * (current_millis - Adc[idx].previous_millis)) / 3600000000);
+  Adc[idx].previous_millis = current_millis;
 }
 
 void AdcEverySecond(void) {
