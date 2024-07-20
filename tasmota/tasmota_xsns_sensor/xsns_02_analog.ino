@@ -543,7 +543,7 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
       samples_in_teleperiod++;  
     }
 
-    AddLog(0, PSTR("rms value:%d, samples:%u, analog:%d, avg over teleperiod:%d, telesamples:%d"), (int)rms, count, (int)analog, (int)avg, samples_in_teleperiod );
+    // AddLog(0, PSTR("rms value:%d, samples:%u, analog:%d, avg over teleperiod:%d, telesamples:%d"), (int)rms, count, (int)analog, (int)avg, samples_in_teleperiod );
     Adc[idx].current = avg * ((float)(Adc[idx].param2) / 10000);
     if (Adc[idx].current < (((float)Adc[idx].param4) / 10000.0))
         Adc[idx].current = 0.0;
