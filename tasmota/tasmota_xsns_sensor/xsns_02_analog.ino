@@ -178,6 +178,8 @@ struct {
 } Adc[MAX_ADCS];
 
 float avg = 0;
+float rms_sum = 0;
+uint8_t samples_in_teleperiod = 0;
 
 bool adcAttachPin(uint8_t pin) {
 #ifdef ESP8266
@@ -524,18 +526,25 @@ void AdcGetCurrentPower(uint8_t idx, uint8_t factor) {
     }
 
     // Calculate RMS
+    // See https://www.electronics-tutorials.ws/accircuits/rms-voltage.html
     float rms_squared = samplesquaredsum / count;
     float rms = sqrt(rms_squared);
     int dc = samplesum / count;
     rms = rms - dc;
 
-    // Lazily average over last few readings to get a nice average over 60s
-    avg -= avg / 30;
-    avg += rms / 30;
-    rms = avg;
+    // Return mean over teleperiod
+    if ((0 == TasmotaGlobal.tele_period) && samples_in_teleperiod ) {
+      // AddLog(0, PSTR("Calculating mean"));
+      avg = rms_sum / samples_in_teleperiod;
+      samples_in_teleperiod = 0;
+      rms_sum = 0;
+    } else {
+      rms_sum += rms;
+      samples_in_teleperiod++;  
+    }
 
-    // AddLog(0, PSTR("value:%d, samples:%u, analog:%d, avg:%d"), (int)rms, count, (int)analog, (int)avg );
-    Adc[idx].current = rms * ((float)(Adc[idx].param2) / 10000);
+    AddLog(0, PSTR("rms value:%d, samples:%u, analog:%d, avg over teleperiod:%d, telesamples:%d"), (int)rms, count, (int)analog, (int)avg, samples_in_teleperiod );
+    Adc[idx].current = avg * ((float)(Adc[idx].param2) / 10000);
     if (Adc[idx].current < (((float)Adc[idx].param4) / 10000.0))
         Adc[idx].current = 0.0;
   }
